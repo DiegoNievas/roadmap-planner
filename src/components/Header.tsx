@@ -1,10 +1,12 @@
-import { Sun, Moon, Download, Upload, Plus, RotateCcw } from 'lucide-react';
+import { Sun, Moon, Download, Upload, Plus, RotateCcw, LogOut } from 'lucide-react';
 import { useRoadmap } from '../context/RoadmapContext';
+import { useAuth } from '../context/AuthContext';
 import { exportToJson, importFromJson } from '../services/storage';
 import { useRef } from 'react';
 
 export default function Header() {
   const { data, darkMode, toggleDarkMode, setShowItemForm, setEditingItem, replaceAllData, resetToSeed } = useRoadmap();
+  const { signOut, user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,6 +57,16 @@ export default function Header() {
           title={darkMode ? 'Light mode' : 'Dark mode'}
         >
           {darkMode ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
+
+        <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 4px' }} />
+
+        <span className="text-xs" style={{ color: 'var(--text-muted)', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {user?.email}
+        </span>
+
+        <button className="btn-secondary" onClick={signOut} title="Sign out">
+          <LogOut size={15} />
         </button>
       </div>
     </header>

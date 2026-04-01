@@ -1,45 +1,209 @@
 /* ──────────────────────────────────────────────
-   Storage service — localStorage implementation.
-   Replace the body of each function with Supabase
-   calls when migrating to a backend.
+   Storage service — Supabase implementation.
+   Each function targets individual tables rather
+   than persisting a single JSON blob.
    ────────────────────────────────────────────── */
 
-import type { AppData } from '../types';
-import { seedData } from '../data/seed';
+import { supabase } from '../lib/supabase';
+import type { AppData, Portfolio, Product, RoadmapItem } from '../types';
 
-const STORAGE_KEY = 'roadmap-planner-data';
-const CURRENT_VERSION = '1.0.0';
+// ── Column mapping helpers ────────────────────
 
-function emptyData(): AppData {
+function toSnake(obj: Record<string, unknown>): Record<string, unknown> {
+  const map: Record<string, string> = {
+    portfolioId: 'portfolio_id',
+    productId: 'product_id',
+    startDate: 'start_date',
+    endDate: 'end_date',
+    milestoneDate: 'milestone_date',
+    strategicTheme: 'strategic_theme',
+    ctoLever: 'cto_lever',
+    customerImpact: 'customer_impact',
+    confidenceLevel: 'confidence_level',
+    effortEstimate: 'effort_estimate',
+    colorTag: 'color_tag',
+    quarterLabel: 'quarter_label',
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+  };
+  const result: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    result[map[k] ?? k] = v;
+  }
+  return result;
+}
+
+function toCamel<T>(obj: Record<string, unknown>): T {
+  const map: Record<string, string> = {
+    portfolio_id: 'portfolioId',
+    product_id: 'productId',
+    start_date: 'startDate',
+    end_date: 'endDate',
+    milestone_date: 'milestoneDate',
+    strategic_theme: 'strategicTheme',
+    cto_lever: 'ctoLever',
+    customer_impact: 'customerImpact',
+    confidence_level: 'confidenceLevel',
+    effort_estimate: 'effortEstimate',
+    color_tag: 'colorTag',
+    quarter_label: 'quarterLabel',
+    created_at: 'createdAt',
+    updated_at: 'updatedAt',
+  };
+  const result: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    result[map[k] ?? k] = v;
+  }
+  return result as T;
+}
+
+// ── Load all data ─────────────────────────────
+
+export async function loadAppData(): Promise<AppData> {
+  const [pRes, prRes, riRes] = await Promise.all([
+    supabase.from('portfolios').select('*').order('created_at'),
+    supabase.from('products').select('*').order('created_at'),
+    supabase.from('roadmap_items').select('*').order('created_at'),
+  ]);
+
+  if (pRes.error) throw pRes.error;
+  if (prRes.error) throw prRes.error;
+  if (riRes.error) throw riRes.error;
+
   return {
-    portfolios: [],
-    products: [],
-    roadmapItems: [],
-    version: CURRENT_VERSION,
+    portfolios: (pRes.data ?? []).map((r) => toCamel<Portfolio>(r as Record<string, unknown>)),
+    products: (prRes.data ?? []).map((r) => toCamel<Product>(r as Record<string, unknown>)),
+    roadmapItems: (riRes.data ?? []).map((r) => toCamel<RoadmapItem>(r as Record<string, unknown>)),
+    version: '2.0.0',
   };
 }
 
-/** Load all app data. Seeds on first run. */
-export async function loadAppData(): Promise<AppData> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      // First visit — seed example data
-      await saveAppData(seedData);
-      return seedData;
-    }
-    return JSON.parse(raw) as AppData;
-  } catch {
-    return emptyData();
+// ── Portfolio CRUD ────────────────────────────
+
+export async function addPortfolioDb(p: Omit<Portfolio, 'id' | 'createdAt' | 'updatedAt'>): Promise<Portfolio> {
+  const { data, error } = await supabase
+    .from('portfolios')
+    .insert(toSnake(p as unknown as Record<string, unknown>))
+    .select()
+    .single();
+  if (error) throw error;
+  return toCamel<Portfolio>(data as Record<string, unknown>);
+}
+
+export async function updatePortfolioDb(p: Portfolio): Promise<Portfolio> {
+  const { id, createdAt: _c, updatedAt: _u, ...rest } = p;
+  const { data, error } = await supabase
+    .from('portfolios')
+    .update(toSnake(rest as unknown as Record<string, unknown>))
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return toCamel<Portfolio>(data as Record<string, unknown>);
+}
+
+export async function deletePortfolioDb(id: string): Promise<void> {
+  const { error } = await supabase.from('portfolios').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ── Product CRUD ──────────────────────────────
+
+export async function addProductDb(p: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<Product> {
+  const { data, error } = await supabase
+    .from('products')
+    .insert(toSnake(p as unknown as Record<string, unknown>))
+    .select()
+    .single();
+  if (error) throw error;
+  return toCamel<Product>(data as Record<string, unknown>);
+}
+
+export async function updateProductDb(p: Product): Promise<Product> {
+  const { id, createdAt: _c, updatedAt: _u, ...rest } = p;
+  const { data, error } = await supabase
+    .from('products')
+    .update(toSnake(rest as unknown as Record<string, unknown>))
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return toCamel<Product>(data as Record<string, unknown>);
+}
+
+export async function deleteProductDb(id: string): Promise<void> {
+  const { error } = await supabase.from('products').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ── Roadmap Item CRUD ─────────────────────────
+
+export async function addRoadmapItemDb(
+  item: Omit<RoadmapItem, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<RoadmapItem> {
+  const { data, error } = await supabase
+    .from('roadmap_items')
+    .insert(toSnake(item as unknown as Record<string, unknown>))
+    .select()
+    .single();
+  if (error) throw error;
+  return toCamel<RoadmapItem>(data as Record<string, unknown>);
+}
+
+export async function updateRoadmapItemDb(item: RoadmapItem): Promise<RoadmapItem> {
+  const { id, createdAt: _c, updatedAt: _u, ...rest } = item;
+  const { data, error } = await supabase
+    .from('roadmap_items')
+    .update(toSnake(rest as unknown as Record<string, unknown>))
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return toCamel<RoadmapItem>(data as Record<string, unknown>);
+}
+
+export async function deleteRoadmapItemDb(id: string): Promise<void> {
+  const { error } = await supabase.from('roadmap_items').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ── Bulk operations ───────────────────────────
+
+export async function replaceAllDataDb(appData: AppData): Promise<void> {
+  // Clear all tables (cascade handles children)
+  await supabase.from('roadmap_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await supabase.from('products').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await supabase.from('portfolios').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+  // Insert new data
+  if (appData.portfolios.length > 0) {
+    const { error } = await supabase
+      .from('portfolios')
+      .insert(appData.portfolios.map((p) => toSnake(p as unknown as Record<string, unknown>)));
+    if (error) throw error;
+  }
+  if (appData.products.length > 0) {
+    const { error } = await supabase
+      .from('products')
+      .insert(appData.products.map((p) => toSnake(p as unknown as Record<string, unknown>)));
+    if (error) throw error;
+  }
+  if (appData.roadmapItems.length > 0) {
+    const { error } = await supabase
+      .from('roadmap_items')
+      .insert(appData.roadmapItems.map((r) => toSnake(r as unknown as Record<string, unknown>)));
+    if (error) throw error;
   }
 }
 
-/** Persist full app data. */
-export async function saveAppData(data: AppData): Promise<void> {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+export async function clearAllDataDb(): Promise<void> {
+  await supabase.from('roadmap_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await supabase.from('products').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await supabase.from('portfolios').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 }
 
-/** Export data as a downloadable JSON file. */
+// ── JSON export/import (client-side) ──────────
+
 export function exportToJson(data: AppData): void {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -50,7 +214,6 @@ export function exportToJson(data: AppData): void {
   URL.revokeObjectURL(url);
 }
 
-/** Import JSON file and return parsed AppData. */
 export function importFromJson(file: File): Promise<AppData> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -69,9 +232,4 @@ export function importFromJson(file: File): Promise<AppData> {
     reader.onerror = () => reject(new Error('Failed to read file'));
     reader.readAsText(file);
   });
-}
-
-/** Clear all stored data (reset). */
-export async function clearAppData(): Promise<void> {
-  localStorage.removeItem(STORAGE_KEY);
 }
