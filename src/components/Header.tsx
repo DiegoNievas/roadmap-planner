@@ -6,7 +6,7 @@ import { useRef } from 'react';
 
 export default function Header() {
   const { data, darkMode, toggleDarkMode, setShowItemForm, setEditingItem, replaceAllData, resetToSeed } = useRoadmap();
-  const { signOut, user } = useAuth();
+  const { signOut, user, isEditor } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,30 +26,40 @@ export default function Header() {
       className="flex items-center justify-between px-6 py-3 border-b shrink-0"
       style={{ borderColor: 'var(--border-color)', background: 'var(--bg-primary)' }}
     >
-      <div>
+      <div className="flex items-center gap-4">
         <h1 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
           Product Roadmap
         </h1>
+        <span className={cn(
+          "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border",
+          isEditor ? "bg-indigo-500/10 text-indigo-500 border-indigo-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+        )}>
+          {isEditor ? 'Editor Access' : 'Executive View'}
+        </span>
       </div>
 
       <div className="flex items-center gap-2">
-        <button className="btn-primary" onClick={() => { setEditingItem(null); setShowItemForm(true); }}>
-          <Plus size={15} />
-          Add Item
-        </button>
+        {isEditor && (
+          <>
+            <button className="btn-primary" onClick={() => { setEditingItem(null); setShowItemForm(true); }}>
+              <Plus size={15} />
+              Add Item
+            </button>
 
-        <button className="btn-secondary" onClick={() => exportToJson(data)} title="Export JSON">
-          <Download size={15} />
-        </button>
+            <button className="btn-secondary" onClick={() => exportToJson(data)} title="Export JSON">
+              <Download size={15} />
+            </button>
 
-        <button className="btn-secondary" onClick={() => fileRef.current?.click()} title="Import JSON">
-          <Upload size={15} />
-        </button>
-        <input ref={fileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+            <button className="btn-secondary" onClick={() => fileRef.current?.click()} title="Import JSON">
+              <Upload size={15} />
+            </button>
+            <input ref={fileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
 
-        <button className="btn-secondary" onClick={resetToSeed} title="Reset to sample data">
-          <RotateCcw size={15} />
-        </button>
+            <button className="btn-secondary" onClick={resetToSeed} title="Reset to sample data">
+              <RotateCcw size={15} />
+            </button>
+          </>
+        )}
 
         <button
           className="btn-secondary"
@@ -71,4 +81,8 @@ export default function Header() {
       </div>
     </header>
   );
+}
+
+function cn(...classes: (string | boolean | undefined)[]) {
+  return classes.filter(Boolean).join(' ');
 }

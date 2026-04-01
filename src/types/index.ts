@@ -110,6 +110,16 @@ export interface FeatureRequest {
   updatedAt: string;
 }
 
+export type UserRole = 'viewer' | 'editor';
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  role: UserRole;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Entire application state persisted to storage */
 export interface AppData {
   portfolios: Portfolio[];
@@ -131,7 +141,8 @@ export type ViewMode =
   | 'table'
   | 'milestones'
   | 'request-feature'
-  | 'feature-requests';
+  | 'feature-requests'
+  | 'user-management';
 
 export type TimelineScale = 'month' | 'quarter' | 'year';
 

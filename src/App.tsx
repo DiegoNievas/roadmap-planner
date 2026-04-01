@@ -1,4 +1,5 @@
 import { useRoadmap } from './context/RoadmapContext';
+import { useAuth } from './context/AuthContext';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './views/Dashboard';
@@ -11,11 +12,13 @@ import MilestonesView from './views/MilestonesView';
 import HomeView from './views/HomeView';
 import RequestFeatureView from './views/RequestFeatureView';
 import FeatureRequestsView from './views/FeatureRequestsView';
+import ManagementView from './views/ManagementView';
 import ItemFormModal from './components/ItemFormModal';
 import FilterBar from './components/FilterBar';
 
 export default function App() {
   const { viewMode, loading, showItemForm, sidebarOpen } = useRoadmap();
+  const { user, isEditor } = useAuth();
 
   if (loading) {
     return (
@@ -40,6 +43,7 @@ export default function App() {
       case 'milestones': return <MilestonesView />;
       case 'request-feature': return <RequestFeatureView />;
       case 'feature-requests': return <FeatureRequestsView />;
+      case 'user-management': return <ManagementView />;
       default: return <HomeView />;
     }
   };
@@ -63,7 +67,7 @@ export default function App() {
           {renderView()}
         </main>
       </div>
-      {showItemForm && <ItemFormModal />}
+      {showItemForm && user && isEditor && <ItemFormModal />}
     </div>
   );
 }

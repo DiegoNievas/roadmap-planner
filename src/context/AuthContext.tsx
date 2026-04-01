@@ -1,14 +1,18 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import type { UserRole } from '../types';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  role: UserRole | null;
+  isEditor: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  refreshRole: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -16,21 +20,46 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const fetchRole = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching role:', error);
+      setRole('viewer'); // Default to viewer on error
+    } else {
+      setRole(data.role as UserRole);
+    }
+  };
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      if (session?.user) {
+        fetchRole(session.user.id).finally(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        if (session?.user) {
+          await fetchRole(session.user.id);
+        } else {
+          setRole(null);
+        }
         setLoading(false);
       }
     );
@@ -52,8 +81,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const refreshRole = async () => {
+    if (user) await fetchRole(user.id);
+  };
+
+  const isEditor = role === 'editor';
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, isEditor, loading, signIn, signUp, signOut, refreshRole }}>
       {children}
     </AuthContext.Provider>
   );
