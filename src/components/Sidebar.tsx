@@ -1,10 +1,27 @@
-import { LayoutDashboard, CalendarRange, Columns3, Table2, Flag, Layers, PanelLeftClose, PanelLeft, FolderKanban } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  CalendarRange, 
+  Columns3, 
+  Table2, 
+  Flag, 
+  Layers, 
+  PanelLeftClose, 
+  PanelLeft, 
+  FolderKanban,
+  Home,
+  MessageSquarePlus,
+  Inbox
+} from 'lucide-react';
 import { useRoadmap } from '../context/RoadmapContext';
 import type { ViewMode } from '../types';
 import { cn } from '../lib/utils';
 
-const NAV_ITEMS: { id: ViewMode; label: string; icon: React.ReactNode }[] = [
+const GENERAL_ITEMS: { id: ViewMode; label: string; icon: React.ReactNode }[] = [
+  { id: 'home', label: 'Home', icon: <Home size={18} /> },
   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+];
+
+const ROADMAP_ITEMS: { id: ViewMode; label: string; icon: React.ReactNode }[] = [
   { id: 'timeline', label: 'Timeline', icon: <CalendarRange size={18} /> },
   { id: 'swimlane-portfolio', label: 'By Portfolio', icon: <Layers size={18} /> },
   { id: 'swimlane-product', label: 'By Product', icon: <Columns3 size={18} /> },
@@ -13,8 +30,39 @@ const NAV_ITEMS: { id: ViewMode; label: string; icon: React.ReactNode }[] = [
   { id: 'milestones', label: 'Milestones', icon: <Flag size={18} /> },
 ];
 
+const FEEDBACK_ITEMS: { id: ViewMode; label: string; icon: React.ReactNode }[] = [
+  { id: 'request-feature', label: 'Request a Feature', icon: <MessageSquarePlus size={18} /> },
+  { id: 'feature-requests', label: 'Feature Requests', icon: <Inbox size={18} /> },
+];
+
 export default function Sidebar() {
   const { viewMode, setViewMode, sidebarOpen, toggleSidebar } = useRoadmap();
+
+  const renderNavGroup = (items: typeof GENERAL_ITEMS, label: string) => (
+    <div className="mb-4">
+      <div className="mb-2 px-3">
+        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+          {label}
+        </span>
+      </div>
+      {items.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => setViewMode(item.id)}
+          className={cn(
+            'flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-[13px] font-medium mb-0.5 transition-all cursor-pointer',
+          )}
+          style={{
+            background: viewMode === item.id ? 'var(--accent-light)' : 'transparent',
+            color: viewMode === item.id ? 'var(--accent)' : 'var(--text-secondary)',
+          }}
+        >
+          {item.icon}
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <>
@@ -63,28 +111,10 @@ export default function Sidebar() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-2">
-          <div className="mb-2 px-3">
-            <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-              Views
-            </span>
-          </div>
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setViewMode(item.id)}
-              className={cn(
-                'flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-[13px] font-medium mb-0.5 transition-all cursor-pointer',
-              )}
-              style={{
-                background: viewMode === item.id ? 'var(--accent-light)' : 'transparent',
-                color: viewMode === item.id ? 'var(--accent)' : 'var(--text-secondary)',
-              }}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
+        <nav className="flex-1 px-3 py-2 overflow-y-auto">
+          {renderNavGroup(GENERAL_ITEMS, 'General')}
+          {renderNavGroup(ROADMAP_ITEMS, 'Roadmap Views')}
+          {renderNavGroup(FEEDBACK_ITEMS, 'Feedback')}
         </nav>
 
         {/* Footer */}

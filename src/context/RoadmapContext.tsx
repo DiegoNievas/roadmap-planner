@@ -1,6 +1,4 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
-import type { AppData, Portfolio, Product, RoadmapItem, Filters, ViewMode, TimelineScale } from '../types';
-import { DEFAULT_FILTERS } from '../types';
 import {
   loadAppData,
   addPortfolioDb,
@@ -12,8 +10,23 @@ import {
   addRoadmapItemDb,
   updateRoadmapItemDb,
   deleteRoadmapItemDb,
+  addFeatureRequestDb,
+  updateFeatureRequestDb,
+  deleteFeatureRequestDb,
   replaceAllDataDb,
 } from '../services/storage';
+
+import type {
+  AppData,
+  Portfolio,
+  Product,
+  RoadmapItem,
+  FeatureRequest,
+  Filters,
+  ViewMode,
+  TimelineScale,
+} from '../types';
+import { DEFAULT_FILTERS } from '../types';
 
 interface RoadmapContextType {
   data: AppData;
@@ -51,6 +64,11 @@ interface RoadmapContextType {
   setEditingItem: (item: RoadmapItem | null) => void;
   setShowItemForm: (show: boolean) => void;
 
+  // CRUD — Feature Requests
+  addFeatureRequest: (fr: Omit<FeatureRequest, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateFeatureRequest: (fr: FeatureRequest) => Promise<void>;
+  deleteFeatureRequest: (id: string) => Promise<void>;
+
   // Data management
   replaceAllData: (data: AppData) => void;
   resetToSeed: () => void;
@@ -68,10 +86,16 @@ function now(): string {
 }
 
 export function RoadmapProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<AppData>({ portfolios: [], products: [], roadmapItems: [], version: '2.0.0' });
+  const [data, setData] = useState<AppData>({ 
+    portfolios: [], 
+    products: [], 
+    roadmapItems: [], 
+    featureRequests: [],
+    version: '2.0.0' 
+  });
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
-  const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
+  const [viewMode, setViewMode] = useState<ViewMode>('home');
   const [timelineScale, setTimelineScale] = useState<TimelineScale>('quarter');
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -281,6 +305,55 @@ export function RoadmapProvider({ children }: { children: ReactNode }) {
     [data.roadmapItems]
   );
 
+  // ── Feature Request CRUD ──
+  const addFeatureRequest = useCallback(
+    async (fr: Omit<FeatureRequest, 'id' | 'createdAt' | 'updatedAt'>) => {
+      try {
+        const created = await addFeatureRequestDb(fr);
+        setData((prev) => ({
+          ...prev,
+          featureRequests: [created, ...prev.featureRequests],
+        }));
+      } catch (err) {
+        console.error('Failed to add feature request:', err);
+        throw err;
+      }
+    },
+    []
+  );
+
+  const updateFeatureRequest = useCallback(
+    async (fr: FeatureRequest) => {
+      setData((prev) => ({
+        ...prev,
+        featureRequests: prev.featureRequests.map((x) => (x.id === fr.id ? { ...fr, updatedAt: now() } : x)),
+      }));
+      try {
+        await updateFeatureRequestDb(fr);
+      } catch (err) {
+        console.error('Failed to update feature request:', err);
+        loadAppData().then(setData);
+      }
+    },
+    []
+  );
+
+  const deleteFeatureRequest = useCallback(
+    async (id: string) => {
+      setData((prev) => ({
+        ...prev,
+        featureRequests: prev.featureRequests.filter((x) => x.id !== id),
+      }));
+      try {
+        await deleteFeatureRequestDb(id);
+      } catch (err) {
+        console.error('Failed to delete feature request:', err);
+        loadAppData().then(setData);
+      }
+    },
+    []
+  );
+
   // ── Data management ──
   const replaceAllData = useCallback(async (newData: AppData) => {
     try {
@@ -363,6 +436,9 @@ export function RoadmapProvider({ children }: { children: ReactNode }) {
         duplicateRoadmapItem,
         setEditingItem,
         setShowItemForm,
+        addFeatureRequest,
+        updateFeatureRequest,
+        deleteFeatureRequest,
         replaceAllData,
         resetToSeed,
         getPortfolio,

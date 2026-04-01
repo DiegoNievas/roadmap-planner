@@ -5,7 +5,7 @@
    ────────────────────────────────────────────── */
 
 import { supabase } from '../lib/supabase';
-import type { AppData, Portfolio, Product, RoadmapItem } from '../types';
+import type { AppData, Portfolio, Product, RoadmapItem, FeatureRequest } from '../types';
 
 // ── Column mapping helpers ────────────────────
 
@@ -23,6 +23,12 @@ function toSnake(obj: Record<string, unknown>): Record<string, unknown> {
     effortEstimate: 'effort_estimate',
     colorTag: 'color_tag',
     quarterLabel: 'quarter_label',
+    businessJustification: 'business_justification',
+    expectedBenefit: 'expected_benefit',
+    submitterName: 'submitter_name',
+    submitterEmail: 'submitter_email',
+    supportingLink: 'supporting_link',
+    strategicAlignment: 'strategic_alignment',
     createdAt: 'created_at',
     updatedAt: 'updated_at',
   };
@@ -47,6 +53,12 @@ function toCamel<T>(obj: Record<string, unknown>): T {
     effort_estimate: 'effortEstimate',
     color_tag: 'colorTag',
     quarter_label: 'quarterLabel',
+    business_justification: 'businessJustification',
+    expected_benefit: 'expectedBenefit',
+    submitter_name: 'submitterName',
+    submitter_email: 'submitterEmail',
+    supporting_link: 'supportingLink',
+    strategic_alignment: 'strategicAlignment',
     created_at: 'createdAt',
     updated_at: 'updatedAt',
   };
@@ -60,20 +72,23 @@ function toCamel<T>(obj: Record<string, unknown>): T {
 // ── Load all data ─────────────────────────────
 
 export async function loadAppData(): Promise<AppData> {
-  const [pRes, prRes, riRes] = await Promise.all([
+  const [pRes, prRes, riRes, frRes] = await Promise.all([
     supabase.from('portfolios').select('*').order('created_at'),
     supabase.from('products').select('*').order('created_at'),
     supabase.from('roadmap_items').select('*').order('created_at'),
+    supabase.from('feature_requests').select('*').order('created_at'),
   ]);
 
   if (pRes.error) throw pRes.error;
   if (prRes.error) throw prRes.error;
   if (riRes.error) throw riRes.error;
+  if (frRes.error) throw frRes.error;
 
   return {
     portfolios: (pRes.data ?? []).map((r) => toCamel<Portfolio>(r as Record<string, unknown>)),
     products: (prRes.data ?? []).map((r) => toCamel<Product>(r as Record<string, unknown>)),
     roadmapItems: (riRes.data ?? []).map((r) => toCamel<RoadmapItem>(r as Record<string, unknown>)),
+    featureRequests: (frRes.data ?? []).map((r) => toCamel<FeatureRequest>(r as Record<string, unknown>)),
     version: '2.0.0',
   };
 }
@@ -167,10 +182,42 @@ export async function deleteRoadmapItemDb(id: string): Promise<void> {
   if (error) throw error;
 }
 
+// ── Feature Request CRUD ──────────────────────
+
+export async function addFeatureRequestDb(
+  fr: Omit<FeatureRequest, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<FeatureRequest> {
+  const { data, error } = await supabase
+    .from('feature_requests')
+    .insert(toSnake(fr as unknown as Record<string, unknown>))
+    .select()
+    .single();
+  if (error) throw error;
+  return toCamel<FeatureRequest>(data as Record<string, unknown>);
+}
+
+export async function updateFeatureRequestDb(fr: FeatureRequest): Promise<FeatureRequest> {
+  const { id, createdAt: _c, updatedAt: _u, ...rest } = fr;
+  const { data, error } = await supabase
+    .from('feature_requests')
+    .update(toSnake(rest as unknown as Record<string, unknown>))
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return toCamel<FeatureRequest>(data as Record<string, unknown>);
+}
+
+export async function deleteFeatureRequestDb(id: string): Promise<void> {
+  const { error } = await supabase.from('feature_requests').delete().eq('id', id);
+  if (error) throw error;
+}
+
 // ── Bulk operations ───────────────────────────
 
 export async function replaceAllDataDb(appData: AppData): Promise<void> {
   // Clear all tables (cascade handles children)
+  await supabase.from('feature_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await supabase.from('roadmap_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await supabase.from('products').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await supabase.from('portfolios').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -194,9 +241,16 @@ export async function replaceAllDataDb(appData: AppData): Promise<void> {
       .insert(appData.roadmapItems.map((r) => toSnake(r as unknown as Record<string, unknown>)));
     if (error) throw error;
   }
+  if (appData.featureRequests.length > 0) {
+    const { error } = await supabase
+      .from('feature_requests')
+      .insert(appData.featureRequests.map((r) => toSnake(r as unknown as Record<string, unknown>)));
+    if (error) throw error;
+  }
 }
 
 export async function clearAllDataDb(): Promise<void> {
+  await supabase.from('feature_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await supabase.from('roadmap_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await supabase.from('products').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await supabase.from('portfolios').delete().neq('id', '00000000-0000-0000-0000-000000000000');

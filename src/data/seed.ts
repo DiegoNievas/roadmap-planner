@@ -285,4 +285,5 @@ export const seedData: AppData = {
       updatedAt: '2025-07-15T00:00:00Z',
     },
   ],
+  featureRequests: [],
 };

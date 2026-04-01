@@ -80,17 +80,58 @@ export interface RoadmapItem {
   updatedAt: string;
 }
 
+export type FeatureRequestStatus =
+  | 'new'
+  | 'under-review'
+  | 'backlog'
+  | 'accepted'
+  | 'planned'
+  | 'rejected'
+  | 'delivered';
+
+export interface FeatureRequest {
+  id: string;
+  title: string;
+  description: string;
+  portfolioId: string | null;
+  productId: string | null;
+  type: string;
+  businessJustification: string;
+  expectedBenefit: string;
+  priority: Priority;
+  submitterName: string;
+  submitterEmail: string;
+  team: string;
+  status: FeatureRequestStatus;
+  supportingLink?: string;
+  impact?: string;
+  strategicAlignment?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** Entire application state persisted to storage */
 export interface AppData {
   portfolios: Portfolio[];
   products: Product[];
   roadmapItems: RoadmapItem[];
+  featureRequests: FeatureRequest[];
   version: string;            // schema version for future migrations
 }
 
 /* ── View / UI types ── */
 
-export type ViewMode = 'dashboard' | 'timeline' | 'swimlane-product' | 'swimlane-portfolio' | 'kanban' | 'table' | 'milestones';
+export type ViewMode =
+  | 'home'
+  | 'dashboard'
+  | 'timeline'
+  | 'swimlane-product'
+  | 'swimlane-portfolio'
+  | 'kanban'
+  | 'table'
+  | 'milestones'
+  | 'request-feature'
+  | 'feature-requests';
 
 export type TimelineScale = 'month' | 'quarter' | 'year';
 

@@ -8,6 +8,9 @@ import TableView from './views/TableView';
 import SwimlaneProdView from './views/SwimlaneProdView';
 import SwimlanePortView from './views/SwimlanePortView';
 import MilestonesView from './views/MilestonesView';
+import HomeView from './views/HomeView';
+import RequestFeatureView from './views/RequestFeatureView';
+import FeatureRequestsView from './views/FeatureRequestsView';
 import ItemFormModal from './components/ItemFormModal';
 import FilterBar from './components/FilterBar';
 
@@ -27,6 +30,7 @@ export default function App() {
 
   const renderView = () => {
     switch (viewMode) {
+      case 'home': return <HomeView />;
       case 'dashboard': return <Dashboard />;
       case 'timeline': return <TimelineView />;
       case 'kanban': return <KanbanView />;
@@ -34,16 +38,27 @@ export default function App() {
       case 'swimlane-product': return <SwimlaneProdView />;
       case 'swimlane-portfolio': return <SwimlanePortView />;
       case 'milestones': return <MilestonesView />;
-      default: return <Dashboard />;
+      case 'request-feature': return <RequestFeatureView />;
+      case 'feature-requests': return <FeatureRequestsView />;
+      default: return <HomeView />;
     }
   };
+
+  const showFilterBar = [
+    'timeline', 
+    'kanban', 
+    'table', 
+    'swimlane-product', 
+    'swimlane-portfolio', 
+    'milestones'
+  ].includes(viewMode);
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
       <Sidebar />
       <div className="flex flex-col flex-1 overflow-hidden" style={{ marginLeft: sidebarOpen ? '240px' : '0' , transition: 'margin-left 0.2s ease' }}>
         <Header />
-        {viewMode !== 'dashboard' && <FilterBar />}
+        {showFilterBar && <FilterBar />}
         <main className="flex-1 overflow-auto p-6">
           {renderView()}
         </main>
